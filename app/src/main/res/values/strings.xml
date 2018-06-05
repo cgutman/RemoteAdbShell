@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Remote ADB Shell</string>
+    <string name="ip_address_hint">IP address or host name</string>
+    <string name="port_hint">Port (usually 5555)</string>
+    <string name="connect_button">Connect</string>
+    <string name="title_activity_adb_shell">Remote ADB Shell</string>
+
+</resources>
