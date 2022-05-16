@@ -19,5 +19,5 @@ android {
 
 dependencies {
     implementation files('libs/AdbLib.jar')
-    implementation 'com.android.support:support-compat:27.1.1'
+    implementation 'androidx.core:core:1.7.0'
 }

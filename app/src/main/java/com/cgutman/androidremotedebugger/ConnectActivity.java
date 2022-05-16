@@ -19,8 +19,7 @@ public class ConnectActivity extends Activity implements OnClickListener {
 	private EditText ipField, portField;
 	
 	private SpinnerDialog keygenSpinner;
-	private Activity activity = this;
-	
+
 	private final static String PREFS_FILE = "AdbConnectPrefs";
 	
 	@Override
@@ -57,13 +56,13 @@ public class ConnectActivity extends Activity implements OnClickListener {
 
 					if (crypto == null)
 					{
-						Dialog.displayDialog(activity, "Key Pair Generation Failed",
+						Dialog.displayDialog(ConnectActivity.this, "Key Pair Generation Failed",
 								"Unable to generate and save RSA key pair", 
 								true);
 						return;
 					}
 					
-					Dialog.displayDialog(activity, "New Key Pair Generated",
+					Dialog.displayDialog(ConnectActivity.this, "New Key Pair Generated",
 							"Devices running 4.2.2 will need to be plugged in to a computer the next time you connect to them",
 							false);
 				}
@@ -88,7 +87,7 @@ public class ConnectActivity extends Activity implements OnClickListener {
 		SharedPreferences.Editor prefs = getSharedPreferences(PREFS_FILE, 0).edit();
 		prefs.putString("IP", ipField.getText().toString());
 		prefs.putString("Port", portField.getText().toString());
-		prefs.commit();
+		prefs.apply();
 	}
 
 	@Override

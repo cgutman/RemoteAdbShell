@@ -51,6 +51,6 @@ public class CommandHistory {
 			edit.putString(""+i, previousCommands.get(i));
 		}
 		edit.putInt("Size", previousCommands.size());
-		edit.commit();
+		edit.apply();
 	}
 }

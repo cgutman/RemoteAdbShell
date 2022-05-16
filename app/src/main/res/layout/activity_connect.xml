@@ -19,7 +19,8 @@
         android:ems="10"
         android:singleLine="true"
         android:nextFocusDown="@+id/portField"
-        android:hint="@string/ip_address_hint" />
+        android:hint="@string/ip_address_hint"
+        android:inputType="text" />
 
     <EditText
         android:id="@+id/portField"

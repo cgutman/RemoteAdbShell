@@ -4,6 +4,7 @@ package com.cgutman.androidremotedebugger.service;
 import java.util.HashMap;
 
 import com.cgutman.adblib.AdbCrypto;
+import com.cgutman.androidremotedebugger.AdbShell;
 import com.cgutman.androidremotedebugger.console.ConsoleBuffer;
 import com.cgutman.androidremotedebugger.devconn.DeviceConnection;
 import com.cgutman.androidremotedebugger.devconn.DeviceConnectionListener;
@@ -21,7 +22,7 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
-import android.support.v4.app.NotificationCompat;
+import androidx.core.app.NotificationCompat;
 
 public class ShellService extends Service implements DeviceConnectionListener {
 	
@@ -87,7 +88,7 @@ public class ShellService extends Service implements DeviceConnectionListener {
 		}
 		if (wakeLock == null) {
 			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-			wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Remote ADB Shell");
+			wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RemoteADBShell:ShellService");
 		}
 		wakeLock.acquire();
 		wlanLock.acquire();
@@ -114,7 +115,7 @@ public class ShellService extends Service implements DeviceConnectionListener {
 	private PendingIntent createPendingIntentForConnection(DeviceConnection devConn) {
 		Context appContext = getApplicationContext();
 		
-		Intent i = new Intent(appContext, com.cgutman.androidremotedebugger.AdbShell.class);
+		Intent i = new Intent(appContext, AdbShell.class);
 		i.putExtra("IP", devConn.getHost());
 		i.putExtra("Port", devConn.getPort());
 		i.setAction(getConnectionString(devConn));
