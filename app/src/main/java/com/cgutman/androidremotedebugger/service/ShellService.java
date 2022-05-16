@@ -83,28 +83,36 @@ public class ShellService extends Service implements DeviceConnectionListener {
 			ShellService.this.listener.removeListener(conn, listener);
 		}
 	}
-	
-	private synchronized void acquireWakeLocks() {
-		if (wlanLock == null) {
-			WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-			wlanLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL, "Remote ADB Shell");
-		}
-		if (wakeLock == null) {
-			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-			wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RemoteADBShell:ShellService");
-		}
-		wakeLock.acquire();
-		wlanLock.acquire();
-	}
-	
-	private synchronized void releaseWakeLocks() {
-		wlanLock.release();
-		wakeLock.release();
-	}
 
 	@Override
 	public IBinder onBind(Intent arg0) {
 		return binder;
+	}
+
+	@Override
+	public void onCreate() {
+		super.onCreate();
+
+		WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+		wlanLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL, "RemoteADBShell:ShellService");
+
+		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+		wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RemoteADBShell:ShellService");
+
+		wakeLock.acquire();
+		wlanLock.acquire();
+	}
+
+	@Override
+	public void onDestroy() {
+		if (wlanLock.isHeld()) {
+			wlanLock.release();
+		}
+		if (wakeLock.isHeld()) {
+			wakeLock.release();
+		}
+
+		super.onDestroy();
 	}
 	
 	private int getFailedNotificationId(DeviceConnection devConn) {
@@ -234,13 +242,11 @@ public class ShellService extends Service implements DeviceConnectionListener {
 	
 	private void addNewConnection(DeviceConnection devConn) {
 		currentConnectionMap.put(getConnectionString(devConn), devConn);
-		acquireWakeLocks();
 	}
 	
 	private void removeConnection(DeviceConnection devConn) {
 		currentConnectionMap.remove(getConnectionString(devConn));
-		releaseWakeLocks();
-		
+
 		/* Stop the the service if no connections remain */
 		if (currentConnectionMap.isEmpty()) {
 			stopSelf();
