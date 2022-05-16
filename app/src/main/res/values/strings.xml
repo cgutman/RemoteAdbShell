@@ -7,4 +7,6 @@
     <string name="connect_button">Connect</string>
     <string name="title_activity_adb_shell">Remote ADB Shell</string>
 
+    <string name="channel_name">Connection Info</string>
+
 </resources>

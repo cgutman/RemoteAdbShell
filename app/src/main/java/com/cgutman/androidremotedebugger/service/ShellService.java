@@ -11,6 +11,7 @@ import com.cgutman.androidremotedebugger.devconn.DeviceConnectionListener;
 import com.cgutman.androidremotedebugger.R;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -19,6 +20,7 @@ import android.content.Intent;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.WifiLock;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
@@ -37,6 +39,7 @@ public class ShellService extends Service implements DeviceConnectionListener {
 
 	private final static int CONN_BASE = 12131;
 	private final static int FAILED_BASE = 12111;
+	private final static String CHANNEL_ID = "connectionInfo";
 	
 	private int foregroundId;
 	
@@ -119,14 +122,25 @@ public class ShellService extends Service implements DeviceConnectionListener {
 		i.putExtra("IP", devConn.getHost());
 		i.putExtra("Port", devConn.getPort());
 		i.setAction(getConnectionString(devConn));
-		
-		return PendingIntent.getActivity(appContext, 0, i,
-				PendingIntent.FLAG_UPDATE_CURRENT);
+
+		int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			flags |= PendingIntent.FLAG_IMMUTABLE;
+		}
+
+		return PendingIntent.getActivity(appContext, 0, i, flags);
 	}
 
 	private Notification createNotification(DeviceConnection devConn, boolean connected) {
 		String ticker;
 		String message;
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			NotificationChannel channel = new NotificationChannel(CHANNEL_ID, getString(R.string.channel_name), NotificationManager.IMPORTANCE_DEFAULT);
+			NotificationManager notificationManager = getSystemService(NotificationManager.class);
+			notificationManager.createNotificationChannel(channel);
+		}
 		
 		if (connected) {
 			ticker = "Connection Established";
@@ -137,15 +151,17 @@ public class ShellService extends Service implements DeviceConnectionListener {
 			message = "Connection to "+getConnectionString(devConn)+" failed";
 		}
 
-		return new NotificationCompat.Builder(getApplicationContext())
+		return new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
 				.setTicker("Remote ADB Shell - "+ticker)
 				.setSmallIcon(R.drawable.notificationicon)
 				.setOnlyAlertOnce(true)
 				.setOngoing(connected)
 				.setAutoCancel(!connected)
+				.setSilent(connected)
 				.setContentTitle("Remote ADB Shell")
 				.setContentText(message)
 				.setContentIntent(createPendingIntentForConnection(devConn))
+				.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
 				.build();
 	}
 	
