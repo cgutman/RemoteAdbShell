@@ -57,4 +57,18 @@ public class AdbUtils {
 		
 		return true;
 	}
+
+	public static void safeAsyncClose(final Closeable c) {
+		if (c == null)
+			return;
+
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					c.close();
+				} catch (IOException ignored) {}
+			}
+		}).start();
+	}
 }

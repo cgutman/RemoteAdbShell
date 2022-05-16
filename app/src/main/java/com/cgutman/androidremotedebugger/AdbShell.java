@@ -238,7 +238,7 @@ public class AdbShell extends Activity implements DeviceConnectionListener, OnKe
 		/* If the connection hasn't actually finished yet,
 		 * close it before terminating */
 		if (connectWaiting != null) {
-			AdbUtils.safeClose(connection);
+			AdbUtils.safeAsyncClose(connection);
 		}
 		
 		/* Unbind from the service since we're going away */
@@ -320,7 +320,7 @@ public class AdbShell extends Activity implements DeviceConnectionListener, OnKe
     			break;
     			
     		case MENU_ID_EXIT:
-    			AdbUtils.safeClose(connection);
+    			AdbUtils.safeAsyncClose(connection);
     			finish();
     			break;
     		}
