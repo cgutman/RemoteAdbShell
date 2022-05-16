@@ -242,7 +242,7 @@ public class AdbShell extends Activity implements DeviceConnectionListener, OnKe
 		}
 		
 		/* Unbind from the service since we're going away */
-		if (service != null) {
+		if (binder != null) {
 			getApplicationContext().unbindService(serviceConn);
 		}
 		
