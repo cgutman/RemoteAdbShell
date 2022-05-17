@@ -17,6 +17,7 @@
             android:configChanges="orientation|screenSize"
             android:name="com.cgutman.androidremotedebugger.ConnectActivity"
             android:exported="true"
+            android:resizeableActivity="true"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -30,6 +31,7 @@
             android:label="@string/title_activity_adb_shell"
             android:configChanges="orientation|screenSize"
             android:exported="true"
+            android:resizeableActivity="true"
             android:parentActivityName="com.cgutman.androidremotedebugger.ConnectActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
