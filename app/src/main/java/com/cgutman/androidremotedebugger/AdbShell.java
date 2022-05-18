@@ -217,9 +217,17 @@ public class AdbShell extends Activity implements DeviceConnectionListener, OnKe
 		commandHistory = CommandHistory.loadCommandHistoryFromPrefs(MAX_COMMAND_HISTORY, this, PREFS_FILE);
 		
 		service = new Intent(this, ShellService.class);
-		getApplicationContext().startService(service);
-		
+
 		onNewIntent(getIntent());
+	}
+
+	@Override
+	protected void onStart() {
+		super.onStart();
+
+		// Only start the background service while in the started stage (or later) of the activity lifecycle.
+		// Background service starts are forbidden starting in Oreo.
+		getApplicationContext().startService(service);
 	}
 	
 	@Override
