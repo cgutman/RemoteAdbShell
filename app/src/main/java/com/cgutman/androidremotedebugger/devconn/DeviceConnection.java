@@ -23,6 +23,7 @@ public class DeviceConnection implements Closeable {
 	private AdbStream shellStream;
 	
 	private boolean closed;
+	private boolean foreground;
 	
 	private LinkedBlockingQueue<byte[]> commandQueue = new LinkedBlockingQueue<byte[]>();
 	
@@ -30,6 +31,7 @@ public class DeviceConnection implements Closeable {
 		this.host = host;
 		this.port = port;
 		this.listener = listener;
+		this.foreground = true; /* Connections start in the foreground */
 	}
 	
 	public String getHost() {
@@ -186,5 +188,13 @@ public class DeviceConnection implements Closeable {
 		
 		/* Finally signal the command queue to allow the send thread to terminate */
 		commandQueue.add(new byte[0]);
+	}
+
+	public boolean isForeground() {
+		return foreground;
+	}
+
+	public void setForeground(boolean foreground) {
+		this.foreground = foreground;
 	}
 }

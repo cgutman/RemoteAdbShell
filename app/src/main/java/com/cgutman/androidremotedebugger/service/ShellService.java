@@ -56,9 +56,11 @@ public class ShellService extends Service implements DeviceConnectionListener {
 		}
 		
 		public void notifyPausingActivity(DeviceConnection devConn) {
+			devConn.setForeground(false);
 		}
 		
 		public void notifyResumingActivity(DeviceConnection devConn) {
+			devConn.setForeground(true);
 		}
 		
 		public void notifyDestroyingActivity(DeviceConnection devConn) {
@@ -198,7 +200,7 @@ public class ShellService extends Service implements DeviceConnectionListener {
 				startForeground(foregroundId, createNotification(devConn, connected));
 			}
 		}
-		else {
+		else if (!devConn.isForeground()) {
 			nm.notify(getFailedNotificationId(devConn), createNotification(devConn, connected));
 		}
 	}
@@ -286,7 +288,7 @@ public class ShellService extends Service implements DeviceConnectionListener {
 
 	@Override
 	public void notifyStreamClosed(DeviceConnection devConn) {
-		removeNotification(devConn);
+		updateNotification(devConn, false);
 		removeConnection(devConn);
 	}
 
