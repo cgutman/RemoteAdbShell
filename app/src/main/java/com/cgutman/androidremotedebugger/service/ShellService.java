@@ -68,11 +68,6 @@ public class ShellService extends Service implements DeviceConnectionListener {
 				NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 				nm.cancel(getFailedNotificationId(devConn));
 			}
-			
-			/* Stop the the service if no connections remain */
-			if (currentConnectionMap.isEmpty()) {
-				stopSelf();
-			}
 		}
 		
 		public void addListener(DeviceConnection conn, DeviceConnectionListener listener) {
@@ -90,6 +85,23 @@ public class ShellService extends Service implements DeviceConnectionListener {
 	}
 
 	@Override
+	public boolean onUnbind(Intent intent) {
+		/* Stop the the service if no connections remain */
+		if (currentConnectionMap.isEmpty()) {
+			stopSelf();
+		}
+
+		return false;
+	}
+
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		// Don't restart if we've been killed. We will have already lost our connections
+		// when we died, so we'll just be running doing nothing if the OS restarted us.
+		return Service.START_NOT_STICKY;
+	}
+
+	@Override
 	public void onCreate() {
 		super.onCreate();
 
@@ -98,9 +110,6 @@ public class ShellService extends Service implements DeviceConnectionListener {
 
 		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RemoteADBShell:ShellService");
-
-		wakeLock.acquire();
-		wlanLock.acquire();
 	}
 
 	@Override
@@ -240,11 +249,16 @@ public class ShellService extends Service implements DeviceConnectionListener {
 		return devConn.getHost()+":"+devConn.getPort();
 	}
 	
-	private void addNewConnection(DeviceConnection devConn) {
+	private synchronized void addNewConnection(DeviceConnection devConn) {
+		if (currentConnectionMap.isEmpty()) {
+			wakeLock.acquire();
+			wlanLock.acquire();
+		}
+
 		currentConnectionMap.put(getConnectionString(devConn), devConn);
 	}
 	
-	private void removeConnection(DeviceConnection devConn) {
+	private synchronized void removeConnection(DeviceConnection devConn) {
 		currentConnectionMap.remove(getConnectionString(devConn));
 
 		/* Stop the the service if no connections remain */
