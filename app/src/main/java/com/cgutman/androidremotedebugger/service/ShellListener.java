@@ -2,6 +2,7 @@ package com.cgutman.androidremotedebugger.service;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.ConcurrentHashMap;
 
 import android.app.Service;
 
@@ -14,25 +15,27 @@ import com.cgutman.androidremotedebugger.devconn.DeviceConnectionListener;
 public class ShellListener implements DeviceConnectionListener {
 	private static final int TERM_LENGTH = 25000;
 	
-	private HashMap<DeviceConnection, LinkedList<DeviceConnectionListener>> listenerMap =
+	private final HashMap<DeviceConnection, LinkedList<DeviceConnectionListener>> listenerMap =
 			new HashMap<DeviceConnection, LinkedList<DeviceConnectionListener>>();
-	private HashMap<DeviceConnection, ConsoleBuffer> consoleMap =
-			new HashMap<DeviceConnection, ConsoleBuffer>();
+	private final ConcurrentHashMap<DeviceConnection, ConsoleBuffer> consoleMap =
+			new ConcurrentHashMap<DeviceConnection, ConsoleBuffer>();
 	private Service service;
 	
 	public ShellListener(Service service) {
 		this.service = service;
 	}
 	
-	public synchronized void addListener(DeviceConnection conn, DeviceConnectionListener listener) {
-		LinkedList<DeviceConnectionListener> listeners = listenerMap.get(conn);
-		if (listeners != null) {
-			listeners.add(listener);
-		}
-		else {
-			listeners = new LinkedList<DeviceConnectionListener>();
-			listeners.add(listener);
-			listenerMap.put(conn, listeners);
+	public void addListener(DeviceConnection conn, DeviceConnectionListener listener) {
+		synchronized (listenerMap) {
+			LinkedList<DeviceConnectionListener> listeners = listenerMap.get(conn);
+			if (listeners != null) {
+				listeners.add(listener);
+			}
+			else {
+				listeners = new LinkedList<DeviceConnectionListener>();
+				listeners.add(listener);
+				listenerMap.put(conn, listeners);
+			}
 		}
 		
 		/* If the listener supports console input, we'll tell them about the console buffer
@@ -43,31 +46,37 @@ public class ShellListener implements DeviceConnectionListener {
 		}
 	}
 	
-	public synchronized void removeListener(DeviceConnection conn, DeviceConnectionListener listener) {
-		LinkedList<DeviceConnectionListener> listeners = listenerMap.get(conn);
-		if (listeners != null) {
-			listeners.remove(listener);
+	public void removeListener(DeviceConnection conn, DeviceConnectionListener listener) {
+		synchronized (listenerMap) {
+			LinkedList<DeviceConnectionListener> listeners = listenerMap.get(conn);
+			if (listeners != null) {
+				listeners.remove(listener);
+			}
 		}
 	}
 	
 	@Override
 	public void notifyConnectionEstablished(DeviceConnection devConn) {
 		consoleMap.put(devConn, new ConsoleBuffer(TERM_LENGTH));
-		
-		LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
-		if (listeners != null) {
-			for (DeviceConnectionListener listener : listeners) {
-				listener.notifyConnectionEstablished(devConn);
+
+		synchronized (listenerMap) {
+			LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
+			if (listeners != null) {
+				for (DeviceConnectionListener listener : listeners) {
+					listener.notifyConnectionEstablished(devConn);
+				}
 			}
 		}
 	}
 
 	@Override
 	public void notifyConnectionFailed(DeviceConnection devConn, Exception e) {
-		LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
-		if (listeners != null) {
-			for (DeviceConnectionListener listener : listeners) {
-				listener.notifyConnectionFailed(devConn, e);
+		synchronized (listenerMap) {
+			LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
+			if (listeners != null) {
+				for (DeviceConnectionListener listener : listeners) {
+					listener.notifyConnectionFailed(devConn, e);
+				}
 			}
 		}
 	}
@@ -78,11 +87,13 @@ public class ShellListener implements DeviceConnectionListener {
 		if (consoleMap.remove(devConn) == null) {
 			return;
 		}
-		
-		LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
-		if (listeners != null) {
-			for (DeviceConnectionListener listener : listeners) {
-				listener.notifyStreamFailed(devConn, e);
+
+		synchronized (listenerMap) {
+			LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
+			if (listeners != null) {
+				for (DeviceConnectionListener listener : listeners) {
+					listener.notifyStreamFailed(devConn, e);
+				}
 			}
 		}
 	}
@@ -93,11 +104,13 @@ public class ShellListener implements DeviceConnectionListener {
 		if (consoleMap.remove(devConn) == null) {
 			return;
 		}
-		
-		LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
-		if (listeners != null) {
-			for (DeviceConnectionListener listener : listeners) {
-				listener.notifyStreamClosed(devConn);
+
+		synchronized (listenerMap) {
+			LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
+			if (listeners != null) {
+				for (DeviceConnectionListener listener : listeners) {
+					listener.notifyStreamClosed(devConn);
+				}
 			}
 		}
 	}
@@ -121,11 +134,13 @@ public class ShellListener implements DeviceConnectionListener {
 			console.append(data, offset, length);
 			
 			/* Attempt to deliver a console update notification */
-			LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
-			if (listeners != null) {
-				for (DeviceConnectionListener listener : listeners) {
-					if (listener.isConsole()) {
-						listener.consoleUpdated(devConn, console);
+			synchronized (listenerMap) {
+				LinkedList<DeviceConnectionListener> listeners = listenerMap.get(devConn);
+				if (listeners != null) {
+					for (DeviceConnectionListener listener : listeners) {
+						if (listener.isConsole()) {
+							listener.consoleUpdated(devConn, console);
+						}
 					}
 				}
 			}
