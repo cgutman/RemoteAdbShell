@@ -12,6 +12,7 @@ import com.cgutman.androidremotedebugger.service.ShellService;
 import com.cgutman.androidremotedebugger.ui.Dialog;
 import com.cgutman.androidremotedebugger.ui.SpinnerDialog;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.app.Activity;
@@ -93,11 +94,23 @@ public class AdbShell extends Activity implements DeviceConnectionListener, OnKe
 		hostName = shellIntent.getStringExtra("IP");
 		port = shellIntent.getIntExtra("Port", -1);
 		if (hostName == null || port == -1) {
-			finish();
+			// If we were launched with no connection info, this was probably a pending intent
+			// that's attempting to bring up the current in-progress connection. If we don't
+			// have an existing connection, then we can do nothing and must finish ourselves.
+			if (connection == null || binder == null) {
+				finish();
+			}
 			return;
 		}
 		
 		setTitle("ADB Shell - "+hostName+":"+port);
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			startForegroundService(service);
+		}
+		else {
+			startService(service);
+		}
 
 		if (binder == null) {
 			/* Bind the service if we're not bound already. After binding, the callback will
@@ -219,15 +232,6 @@ public class AdbShell extends Activity implements DeviceConnectionListener, OnKe
 		service = new Intent(this, ShellService.class);
 
 		onNewIntent(getIntent());
-	}
-
-	@Override
-	protected void onStart() {
-		super.onStart();
-
-		// Only start the background service while in the started stage (or later) of the activity lifecycle.
-		// Background service starts are forbidden starting in Oreo.
-		getApplicationContext().startService(service);
 	}
 	
 	@Override

@@ -37,6 +37,7 @@ public class ShellService extends Service implements DeviceConnectionListener {
 	private WifiLock wlanLock;
 	private WakeLock wakeLock;
 
+	private final static int FOREGROUND_PLACEHOLDER_ID = 1;
 	private final static int CONN_BASE = 12131;
 	private final static int FAILED_BASE = 12111;
 	private final static String CHANNEL_ID = "connectionInfo";
@@ -98,6 +99,13 @@ public class ShellService extends Service implements DeviceConnectionListener {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		if (foregroundId == 0) {
+			// If we're not already running in the foreground, use a placeholder
+			// notification until a real connection is established. After connection
+			// establishment, the real notification will replace this one.
+			startForeground(FOREGROUND_PLACEHOLDER_ID, createForegroundPlaceholderNotification());
+		}
+
 		// Don't restart if we've been killed. We will have already lost our connections
 		// when we died, so we'll just be running doing nothing if the OS restarted us.
 		return Service.START_NOT_STICKY;
@@ -106,6 +114,12 @@ public class ShellService extends Service implements DeviceConnectionListener {
 	@Override
 	public void onCreate() {
 		super.onCreate();
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			NotificationChannel channel = new NotificationChannel(CHANNEL_ID, getString(R.string.channel_name), NotificationManager.IMPORTANCE_DEFAULT);
+			NotificationManager notificationManager = getSystemService(NotificationManager.class);
+			notificationManager.createNotificationChannel(channel);
+		}
 
 		WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
 		wlanLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL, "RemoteADBShell:ShellService");
@@ -151,15 +165,35 @@ public class ShellService extends Service implements DeviceConnectionListener {
 		return PendingIntent.getActivity(appContext, 0, i, flags);
 	}
 
-	private Notification createNotification(DeviceConnection devConn, boolean connected) {
+	private PendingIntent createPendingIntentToLaunchShellActivity() {
+		Context appContext = getApplicationContext();
+
+		Intent i = new Intent(appContext, AdbShell.class);
+
+		int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			flags |= PendingIntent.FLAG_IMMUTABLE;
+		}
+
+		return PendingIntent.getActivity(appContext, 0, i, flags);
+	}
+
+	private Notification createForegroundPlaceholderNotification() {
+		return new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
+				.setSmallIcon(R.drawable.notificationicon)
+				.setOngoing(true)
+				.setSilent(true)
+				.setContentTitle("Remote ADB Shell")
+				.setContentText("Connecting...")
+				.setContentIntent(createPendingIntentToLaunchShellActivity())
+				.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+				.build();
+	}
+
+	private Notification createConnectionNotification(DeviceConnection devConn, boolean connected) {
 		String ticker;
 		String message;
-
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-			NotificationChannel channel = new NotificationChannel(CHANNEL_ID, getString(R.string.channel_name), NotificationManager.IMPORTANCE_DEFAULT);
-			NotificationManager notificationManager = getSystemService(NotificationManager.class);
-			notificationManager.createNotificationChannel(channel);
-		}
 		
 		if (connected) {
 			ticker = "Connection Established";
@@ -192,16 +226,16 @@ public class ShellService extends Service implements DeviceConnectionListener {
 		if (connected) {
 			if (foregroundId != 0) {
 				/* There's already a foreground notification, so use the normal notification framework */
-				nm.notify(getConnectedNotificationId(devConn), createNotification(devConn, connected));
+				nm.notify(getConnectedNotificationId(devConn), createConnectionNotification(devConn, connected));
 			}
 			else {
 				/* This is the first notification so make it the foreground one */
 				foregroundId = getConnectedNotificationId(devConn);
-				startForeground(foregroundId, createNotification(devConn, connected));
+				startForeground(foregroundId, createConnectionNotification(devConn, connected));
 			}
 		}
 		else if (!devConn.isForeground()) {
-			nm.notify(getFailedNotificationId(devConn), createNotification(devConn, connected));
+			nm.notify(getFailedNotificationId(devConn), createConnectionNotification(devConn, connected));
 		}
 	}
 	
@@ -238,7 +272,7 @@ public class ShellService extends Service implements DeviceConnectionListener {
 				 * and start it as foreground */
 				foregroundId = getConnectedNotificationId(newConn);
 				nm.cancel(foregroundId);
-				startForeground(foregroundId, createNotification(newConn, true));
+				startForeground(foregroundId, createConnectionNotification(newConn, true));
 			}
 		}
 		else {
