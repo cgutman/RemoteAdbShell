@@ -4,7 +4,10 @@ import com.cgutman.adblib.AdbCrypto;
 import com.cgutman.androidremotedebugger.ui.Dialog;
 import com.cgutman.androidremotedebugger.ui.SpinnerDialog;
 
+import android.content.Context;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.text.format.Formatter;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -76,16 +79,20 @@ public class ConnectActivity extends Activity implements OnClickListener {
 		SpinnerDialog.closeDialogs();
 		super.onDestroy();
 	}
+
+	private String ipAddress() {
+		WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+		return Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
+	}
 	
 	private void loadPreferences() {
 		SharedPreferences prefs = getSharedPreferences(PREFS_FILE, 0);
-		ipField.setText(prefs.getString("IP", ""));
+		ipField.setText(ipAddress());
 		portField.setText(prefs.getString("Port", "5555"));
 	}
 	
 	private void savePreferences() {
 		SharedPreferences.Editor prefs = getSharedPreferences(PREFS_FILE, 0).edit();
-		prefs.putString("IP", ipField.getText().toString());
 		prefs.putString("Port", portField.getText().toString());
 		prefs.apply();
 	}
